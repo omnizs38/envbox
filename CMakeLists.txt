@@ -53,6 +53,29 @@ add_library(envbox_core
     src/core/tar.cpp)
 add_library(envbox::core ALIAS envbox_core)
 
+add_library(envbox_platform STATIC src/platform/paths.cpp)
+add_library(envbox::platform ALIAS envbox_platform)
+target_include_directories(envbox_platform PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(envbox_platform PUBLIC cxx_std_23)
+
+add_library(envbox_engine STATIC
+    src/engine/adapter.cpp
+    src/engine/capture.cpp
+    src/engine/restore.cpp)
+add_library(envbox::engine ALIAS envbox_engine)
+target_include_directories(envbox_engine PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(envbox_engine PUBLIC cxx_std_23)
+target_link_libraries(envbox_engine PUBLIC envbox::core envbox::platform)
+
+add_library(envbox_adapter_git STATIC src/adapters/git.cpp)
+add_library(envbox::adapter_git ALIAS envbox_adapter_git)
+target_include_directories(envbox_adapter_git PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(envbox_adapter_git PUBLIC cxx_std_23)
+target_link_libraries(envbox_adapter_git PUBLIC envbox::engine)
+
 target_include_directories(envbox_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_compile_features(envbox_core PUBLIC cxx_std_23)
@@ -65,6 +88,14 @@ if(MSVC)
 else()
     target_compile_options(envbox_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+foreach(extra_target envbox_platform envbox_engine envbox_adapter_git)
+    if(MSVC)
+        target_compile_options(${extra_target} PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(${extra_target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endforeach()
 
 if(ENVBOX_BUILD_TESTS)
     enable_testing()

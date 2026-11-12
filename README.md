@@ -7,8 +7,8 @@ normalizes it into a single portable `.envbox` profile, and restores it on anoth
 machine — adapting paths, values, and incompatibilities to the target operating
 system instead of blindly copying files.
 
-> Status: **pre-alpha. Core library (`envbox::core`) implemented and tested.**
-> Engine, adapters, CLI and desktop UI are still on the roadmap (see below).
+> Status: **pre-alpha. Core library, capture/restore engine and Git adapter implemented and tested.**
+> VS Code / Firefox adapters, CLI and desktop UI are still on the roadmap (see below).
 
 ## How it works
 
@@ -48,10 +48,13 @@ ctest --test-dir build --output-on-failure
 ```
 include/envbox/core/    public API of the core library
 src/core/               .envbox container, ustar, profile (de)serialization + verification
-tests/core/             GoogleTest suite
-engine/                 capture / restore / migration / diff engines   (planned)
-adapters/               per-application adapters: vscode, git, firefox (planned)
-platform/               OS-specific path/registry handling              (planned)
+src/platform/           cross-platform path resolution
+src/engine/             adapter API, capture + restore (plan/apply), backup-before-restore
+src/adapters/git.cpp    Git adapter (global .gitconfig / XDG git config)
+tests/                  GoogleTest suite (core, engine, adapters)
+engine/                 design notes for the engine components
+adapters/               design notes for adapters: vscode, git, firefox
+platform/               design notes for OS-specific backends
 sdk/                    public adapter SDK for third-party adapters     (planned)
 cli/                    `envbox` command line tool                      (planned)
 desktop/                Dear ImGui desktop UI                           (planned)
@@ -60,9 +63,9 @@ docs/                   format specification and design notes
 
 ## Roadmap
 
-1. **Envbox Core** — `.envbox` read/write/validate/verify (done, this repo)
-2. **Capture / Restore engine** — adapter API, backup-before-restore, conflict detection
-3. **First adapters** — Git, VS Code, Firefox
+1. **Envbox Core** — `.envbox` read/write/validate/verify (done)
+2. **Capture / Restore engine** — adapter API, backup-before-restore, conflict detection (done)
+3. **First adapters** — Git (done), VS Code, Firefox
 4. **Cross-platform compatibility** — path conversion, incompatible-parameter detection
 5. **CLI** — `envbox capture|inspect|restore|diff`
 6. **Desktop** — Dear ImGui application

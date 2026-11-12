@@ -13,6 +13,7 @@ enum class ErrorCode {
     validation,
     integrity,
     not_found,
+    conflict,
 };
 
 struct Error {

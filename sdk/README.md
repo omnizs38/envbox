@@ -1,13 +1,16 @@
 # SDK
 
-Public adapter SDK for third-party adapter developers. **Planned — not implemented yet.**
+Public adapter SDK for third-party adapter developers. **Not implemented yet.**
 
-Goals:
+What exists today: the adapter interface in `include/envbox/engine/adapter.hpp`
+(`Adapter::capture()`, `Adapter::resolve_targets()`, `AdapterRegistry`). Built-in adapters
+(`src/adapters/`) use it directly, and so can third parties by static linking.
 
-- adapter authors link against `envbox-sdk` only; Core does not depend on any adapter
-- stable C ABI for dynamic loading, plus a thin C++ convenience header
-- adapter manifest describing id, version, supported OSes, and capture/restore entry points
+What the SDK milestone adds:
 
-Third-party adapters are verified against a conformance test suite shipped with the SDK.
-Format details live in [../docs/format-v1.md](../docs/format-v1.md); adapter API design is
-tracked as part of the capture/restore milestone.
+- stable C ABI for dynamic loading + a thin C++ convenience header
+- adapter manifest describing id, version, supported OSes, and entry points
+- conformance test suite shipped with the SDK
+
+Constraint: the engine never depends on adapter internals; adapters only see the SDK surface.
+Format details live in [../docs/format-v1.md](../docs/format-v1.md).
