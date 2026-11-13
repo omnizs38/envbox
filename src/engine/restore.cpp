@@ -93,9 +93,15 @@ Status write_file_atomic(const std::filesystem::path& target, const std::vector<
 
 }
 
-Result<RestorePlan> plan_restore(const Profile& profile, const AdapterRegistry& registry) {
+Result<RestorePlan> plan_restore(const Profile& profile, const AdapterRegistry& registry, const PlanOptions& options) {
+    const OsKind target_os = options.target_os_override.value_or(current_os().kind);
     RestorePlan plan;
     plan.profile_name = profile.info.name;
+
+    std::unordered_map<std::string, const TarEntry*> payload_by_path;
+    for (const auto& entry : profile.payload) {
+        payload_by_path.emplace(entry.path, &entry);
+    }
 
     std::set<std::string> payload_app_ids;
     for (const auto& entry : profile.payload) {
@@ -134,18 +140,43 @@ Result<RestorePlan> plan_restore(const Profile& profile, const AdapterRegistry& 
             plan.missing.emplace_back(app.adapter, resolutions.error().message);
             continue;
         }
-        for (auto& resolution : *resolutions) {
+        std::set<std::string> resolved;
+        for (const auto& resolution : *resolutions) {
+            const auto found = payload_by_path.find(resolution.payload_path);
+            if (found == payload_by_path.end()) {
+                plan.missing.emplace_back(app.adapter, "resolved path does not match any payload: " + resolution.payload_path);
+                continue;
+            }
+            const std::vector<std::byte>& original = found->second->data;
+            auto adapted = adapter->adapt_payload(resolution, original, profile, target_os);
+            if (!adapted) {
+                plan.missing.emplace_back(app.adapter, "adapting '" + resolution.payload_path + "' failed: " + adapted.error().message);
+                continue;
+            }
+            for (auto& warning : adapted->warnings) {
+                plan.warnings.push_back(app.id + ": " + warning);
+            }
+            resolved.insert(resolution.payload_path);
+
             RestoreAction action;
-            action.payload_path = std::move(resolution.payload_path);
+            action.payload_path = resolution.payload_path;
             action.application_id = app.id;
-            action.target = std::move(resolution.target);
-            action.note = std::move(resolution.note);
+            action.adapter_id = app.adapter;
+            action.target = resolution.target;
+            action.note = resolution.note;
+            action.adapted = adapted->data != original;
+            action.data = std::move(adapted->data);
             std::error_code ec;
             action.target_exists = std::filesystem::exists(action.target, ec) && !ec;
             if (action.target_exists) {
                 plan.conflicts.push_back(action.target.string());
             }
             plan.actions.push_back(std::move(action));
+        }
+        for (const auto& path : paths) {
+            if (!resolved.contains(path)) {
+                plan.warnings.push_back("adapter '" + app.adapter + "' did not resolve '" + path + "'; skipping");
+            }
         }
     }
 
@@ -158,7 +189,7 @@ Result<RestorePlan> plan_restore(const Profile& profile, const AdapterRegistry& 
     return plan;
 }
 
-Result<RestoreResult> apply_restore(const Profile& profile, const RestorePlan& plan, const RestoreOptions& options) {
+Result<RestoreResult> apply_restore(const RestorePlan& plan, const RestoreOptions& options) {
     if (!options.dry_run && !options.force && !plan.conflicts.empty()) {
         std::string message = "refusing to overwrite " + std::to_string(plan.conflicts.size()) + " existing file(s): ";
         const std::size_t preview = std::min<std::size_t>(plan.conflicts.size(), 3);
@@ -170,11 +201,6 @@ Result<RestoreResult> apply_restore(const Profile& profile, const RestorePlan& p
         }
         message += " (re-run with force; existing files are backed up automatically)";
         return std::unexpected(Error::make(ErrorCode::conflict, std::move(message)));
-    }
-
-    std::unordered_map<std::string, const TarEntry*> payload_by_path;
-    for (const auto& entry : profile.payload) {
-        payload_by_path.emplace(entry.path, &entry);
     }
 
     struct BackupRecord {
@@ -193,12 +219,6 @@ Result<RestoreResult> apply_restore(const Profile& profile, const RestorePlan& p
     const std::size_t total = plan.actions.size();
 
     for (const auto& action : plan.actions) {
-        const auto found = payload_by_path.find(action.payload_path);
-        if (found == payload_by_path.end()) {
-            return std::unexpected(Error::make(ErrorCode::integrity, "plan references a missing payload: " + action.payload_path));
-        }
-        const TarEntry& payload = *found->second;
-
         if (options.dry_run) {
             result.applied.push_back({action.payload_path, action.target, false, {}});
             continue;
@@ -247,7 +267,7 @@ Result<RestoreResult> apply_restore(const Profile& profile, const RestorePlan& p
                 return std::unexpected(Error::make(ErrorCode::io, "cannot create directory " + action.target.parent_path().string()));
             }
         }
-        if (auto status = write_file_atomic(action.target, payload.data); !status) {
+        if (auto status = write_file_atomic(action.target, action.data); !status) {
             return std::unexpected(Error::make(ErrorCode::io, "restore failed after applying " + std::to_string(applied_count) + " of " + std::to_string(total) + " file(s); backup kept at " + backup_dir.string() + ": " + status.error().message));
         }
         ++applied_count;

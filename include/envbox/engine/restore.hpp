@@ -1,10 +1,12 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "envbox/core/error.hpp"
+#include "envbox/core/os.hpp"
 #include "envbox/core/profile.hpp"
 #include "envbox/engine/adapter.hpp"
 #include "envbox/platform/paths.hpp"
@@ -14,9 +16,12 @@ namespace envbox::engine {
 struct RestoreAction {
     std::string payload_path;
     std::string application_id;
+    std::string adapter_id;
     std::filesystem::path target;
     std::string note;
     bool target_exists = false;
+    bool adapted = false;
+    std::vector<std::byte> data;
 };
 
 struct RestorePlan {
@@ -45,9 +50,14 @@ struct RestoreResult {
     std::vector<AppliedAction> applied;
 };
 
-[[nodiscard]] Result<RestorePlan> plan_restore(const Profile& profile, const AdapterRegistry& registry);
-[[nodiscard]] Result<RestoreResult> apply_restore(const Profile& profile,
-                                                  const RestorePlan& plan,
+struct PlanOptions {
+    std::optional<OsKind> target_os_override;
+};
+
+[[nodiscard]] Result<RestorePlan> plan_restore(const Profile& profile,
+                                               const AdapterRegistry& registry,
+                                               const PlanOptions& options = {});
+[[nodiscard]] Result<RestoreResult> apply_restore(const RestorePlan& plan,
                                                   const RestoreOptions& options);
 
 }

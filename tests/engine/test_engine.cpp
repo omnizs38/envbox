@@ -108,7 +108,7 @@ TEST(Engine, RestoreIntoFreshHomePlacesConfigAtHostDefault) {
     EXPECT_EQ(plan->actions[0].target, host_default_target(target_home.path()));
 
     const fs::path backup_root = target_home.path() / "backups";
-    auto result = apply_restore(captured.profile, *plan, RestoreOptions{backup_root, false, false});
+    auto result = apply_restore(*plan, RestoreOptions{backup_root, false, false});
     ASSERT_TRUE(result);
     const fs::path expected = host_default_target(target_home.path());
     ASSERT_TRUE(fs::exists(expected));
@@ -134,7 +134,7 @@ TEST(Engine, RestoreWithConflictRefusesWithoutForce) {
     ASSERT_EQ(plan->conflicts.size(), 1u);
 
     const fs::path backup_root = target_home.path() / "backups";
-    auto refused = apply_restore(captured.profile, *plan, RestoreOptions{backup_root, false, false});
+    auto refused = apply_restore(*plan, RestoreOptions{backup_root, false, false});
     ASSERT_FALSE(refused);
     EXPECT_EQ(refused.error().code, ErrorCode::conflict);
     EXPECT_EQ(read_text_file(target), "[user]\n\tname = PreExisting\n");
@@ -159,7 +159,7 @@ TEST(Engine, RestoreWithForceBacksUpOriginal) {
     ASSERT_EQ(plan->conflicts.size(), 1u);
 
     const fs::path backup_root = target_home.path() / "backups";
-    auto result = apply_restore(captured.profile, *plan, RestoreOptions{backup_root, true, false});
+    auto result = apply_restore(*plan, RestoreOptions{backup_root, true, false});
     ASSERT_TRUE(result);
     EXPECT_EQ(read_text_file(target), kCapturedConfig);
     ASSERT_FALSE(result->backup_dir.empty());
@@ -196,7 +196,7 @@ TEST(Engine, DryRunDoesNotTouchDisk) {
     ASSERT_TRUE(plan);
 
     const fs::path backup_root = target_home.path() / "backups";
-    auto result = apply_restore(captured.profile, *plan, RestoreOptions{backup_root, false, true});
+    auto result = apply_restore(*plan, RestoreOptions{backup_root, false, true});
     ASSERT_TRUE(result);
     EXPECT_EQ(read_text_file(target), "[user]\n\tname = PreExisting\n");
     EXPECT_FALSE(fs::exists(backup_root));
@@ -230,6 +230,23 @@ TEST(Engine, PlanWarnsAboutUnmanagedPayloadRoots) {
     ASSERT_EQ(plan->warnings.size(), 1u);
     EXPECT_NE(plan->warnings[0].find("system/environment.json"), std::string::npos);
     EXPECT_TRUE(plan->actions.empty());
+}
+
+TEST(Engine, PlanActionsCarryAdaptedBytes) {
+    FakeHome source;
+    EnvGuard env;
+    source.wire(env);
+    const fs::path out = source.path() / "captured.envbox";
+    auto captured = capture_git_profile(source, out);
+
+    AdapterRegistry registry;
+    registry.add(adapters::make_git_adapter());
+    auto plan = plan_restore(captured.profile, registry);
+    ASSERT_TRUE(plan);
+    EXPECT_TRUE(plan->warnings.empty());
+    ASSERT_EQ(plan->actions.size(), 1u);
+    EXPECT_FALSE(plan->actions[0].adapted);
+    EXPECT_EQ(plan->actions[0].data.size(), std::char_traits<char>::length(kCapturedConfig));
 }
 
 TEST(Engine, PlanWarnsWhenApplicationHasNoPayload) {

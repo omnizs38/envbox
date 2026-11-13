@@ -76,6 +76,19 @@ target_include_directories(envbox_adapter_git PUBLIC
 target_compile_features(envbox_adapter_git PUBLIC cxx_std_23)
 target_link_libraries(envbox_adapter_git PUBLIC envbox::engine)
 
+add_library(envbox_adapter_vscode STATIC src/adapters/vscode.cpp)
+add_library(envbox::adapter_vscode ALIAS envbox_adapter_vscode)
+target_include_directories(envbox_adapter_vscode PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(envbox_adapter_vscode PUBLIC cxx_std_23)
+target_link_libraries(envbox_adapter_vscode PUBLIC envbox::engine)
+
+add_executable(envbox src/cli/main.cpp)
+target_compile_features(envbox PRIVATE cxx_std_23)
+target_link_libraries(envbox PRIVATE envbox::adapter_vscode envbox::adapter_git)
+include(GNUInstallDirs)
+install(TARGETS envbox RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
 target_include_directories(envbox_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_compile_features(envbox_core PUBLIC cxx_std_23)
@@ -89,7 +102,7 @@ else()
     target_compile_options(envbox_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-foreach(extra_target envbox_platform envbox_engine envbox_adapter_git)
+foreach(extra_target envbox_platform envbox_engine envbox_adapter_git envbox_adapter_vscode envbox)
     if(MSVC)
         target_compile_options(${extra_target} PRIVATE /W4 /permissive-)
     else()

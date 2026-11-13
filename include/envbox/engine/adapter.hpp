@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "envbox/core/error.hpp"
+#include "envbox/core/os.hpp"
 #include "envbox/core/profile.hpp"
 
 namespace envbox::engine {
@@ -23,6 +24,11 @@ struct TargetResolution {
     std::string note;
 };
 
+struct PayloadAdaptation {
+    std::vector<std::byte> data;
+    std::vector<std::string> warnings;
+};
+
 class Adapter {
   public:
     virtual ~Adapter() = default;
@@ -32,6 +38,13 @@ class Adapter {
     virtual Result<CapturedApplication> capture() const = 0;
     virtual Result<std::vector<TargetResolution>> resolve_targets(
         const std::vector<std::string>& payload_paths) const = 0;
+
+    virtual Result<PayloadAdaptation> adapt_payload(const TargetResolution&,
+                                                    const std::vector<std::byte>& data,
+                                                    const Profile&,
+                                                    OsKind) const {
+        return PayloadAdaptation{data, {}};
+    }
 };
 
 class AdapterRegistry {

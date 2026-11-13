@@ -1,18 +1,28 @@
 # CLI
 
-`envbox` command line tool. **Planned — lands after the capture/restore engine.**
+`envbox` command line tool. **Implemented: capture, inspect, restore.**
 
 ```
 envbox capture --profile workstation
 envbox inspect workstation.envbox
+envbox inspect workstation.envbox --json
+envbox restore workstation.envbox --dry-run
+envbox restore workstation.envbox --dry-run --os linux
 envbox restore workstation.envbox
-envbox diff workstation.envbox
+envbox restore workstation.envbox --force
 ```
 
-Design notes:
+Behavior:
 
-- `capture` defaults to `<name>.envbox` in the current directory; `--app git,vscode` limits scope
-- `restore` always verifies the profile first, backs up existing files, and lists conflicts
-  before writing; `--dry-run` prints the plan without touching disk
-- exit codes: 0 ok, 1 generic error, 2 verification/integrity failure, 3 conflicts require `--force`
-- machine-readable output via `--json` for scripting
+- `capture` defaults to `<name>.envbox` in the current directory; adapters run
+  best-effort and skipped applications are reported with reasons
+- `inspect` verifies the profile (format, paths, BLAKE3 index) before printing anything;
+  `--json` emits the full profile as JSON
+- `restore` always verifies first, backs up pre-existing files to the envbox backup root
+  with a `backup.json` manifest, and refuses to overwrite without `--force`
+- `--dry-run` prints the plan without touching disk; `--os <target>` analyzes the restore
+  for another OS (adaptation warnings only; file placement always follows the host)
+
+Exit codes: 0 ok, 1 error, 2 integrity verification failed, 3 conflicts require `--force`.
+
+Planned: `diff` (preview changes in detail), `--app git,vscode` scoping, `--json` on all commands.
