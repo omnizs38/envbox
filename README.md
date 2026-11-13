@@ -7,9 +7,9 @@ normalizes it into a single portable `.envbox` profile, and restores it on anoth
 machine — adapting paths, values, and incompatibilities to the target operating
 system instead of blindly copying files.
 
-> Status: **pre-alpha. Core, engine, all three first adapters (Git, VS Code, Firefox), the CLI
-> and the cross-OS compatibility layer are implemented and tested.** Remaining: desktop UI, SDK,
-> CLI `diff`.
+> Status: **pre-alpha. Core, engine, all three adapters (Git, VS Code, Firefox), the CLI,
+> the compatibility layer and the Dear ImGui desktop app are implemented and tested.**
+> Remaining: adapter SDK, CLI `diff`, UI polish.
 
 ## How it works
 
@@ -44,6 +44,10 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+The desktop app (`envbox_desktop`) is built by default; its first configure fetches GLFW and
+Dear ImGui via `FetchContent` (network required once). Use `-DENVBOX_BUILD_DESKTOP=OFF` to
+build only the CLI and library.
+
 ## Layout
 
 ```
@@ -62,7 +66,7 @@ adapters/               design notes for adapters: vscode, git, firefox
 platform/               design notes for OS-specific backends
 sdk/                    public adapter SDK for third-party adapters     (planned)
 cli/                    command line tool (implemented)
-desktop/                Dear ImGui desktop UI                           (planned)
+desktop/                Dear ImGui desktop UI (implemented; GLFW + OpenGL)
 docs/                   format specification and design notes
 ```
 
@@ -73,7 +77,7 @@ docs/                   format specification and design notes
 3. **First adapters** — Git, VS Code, Firefox (done)
 4. **Cross-platform compatibility** — path classification/conversion + per-adapter incompatibility detection (done; conversion is best-effort, not guessing)
 5. **CLI** — `envbox capture|inspect|restore` (done); `diff` remaining
-6. **Desktop** — Dear ImGui application
+6. **Desktop** — Dear ImGui application (v1 done: capture, restore plan/apply, logs)
 
 ## Development principles
 
