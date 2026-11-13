@@ -7,8 +7,9 @@ normalizes it into a single portable `.envbox` profile, and restores it on anoth
 machine — adapting paths, values, and incompatibilities to the target operating
 system instead of blindly copying files.
 
-> Status: **pre-alpha. Core, engine, Git + VS Code adapters and the CLI are implemented and tested.**
-> Firefox adapter, CLI `diff`/`--json`, and the desktop UI are still on the roadmap (see below).
+> Status: **pre-alpha. Core, engine, all three first adapters (Git, VS Code, Firefox), the CLI
+> and the cross-OS compatibility layer are implemented and tested.** Remaining: desktop UI, SDK,
+> CLI `diff`.
 
 ## How it works
 
@@ -52,6 +53,8 @@ src/platform/           cross-platform path resolution
 src/engine/             adapter API, capture + restore (plan/apply), backup-before-restore
 src/adapters/git.cpp    Git adapter (global .gitconfig / XDG git config)
 src/adapters/vscode.cpp VS Code adapter (settings/keybindings/snippets/extensions + OS-mismatch analysis)
+src/adapters/firefox.cpp Firefox adapter (profiles.ini discovery, prefs.js sanitized into user.js)
+src/compat/             path classification/conversion between Windows, Linux and macOS
 src/cli/main.cpp        envbox CLI (capture, inspect, restore)
 tests/                  GoogleTest suite (core, engine, adapters)
 engine/                 design notes for the engine components
@@ -67,8 +70,8 @@ docs/                   format specification and design notes
 
 1. **Envbox Core** — `.envbox` read/write/validate/verify (done)
 2. **Capture / Restore engine** — adapter API, backup-before-restore, conflict detection (done)
-3. **First adapters** — Git, VS Code (done), Firefox
-4. **Cross-platform compatibility** — path conversion, incompatible-parameter detection
+3. **First adapters** — Git, VS Code, Firefox (done)
+4. **Cross-platform compatibility** — path classification/conversion + per-adapter incompatibility detection (done; conversion is best-effort, not guessing)
 5. **CLI** — `envbox capture|inspect|restore` (done); `diff` remaining
 6. **Desktop** — Dear ImGui application
 

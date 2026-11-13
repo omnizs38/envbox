@@ -183,6 +183,34 @@ TEST(VscodeAdapter, WindowsTargetDoesNotFlagWindowsValues) {
     EXPECT_EQ(all_warnings.find("no terminal profile configured for windows"), std::string::npos);
 }
 
+TEST(VscodeAdapter, UrlsAreNotFlaggedAsWindowsPaths) {
+    FakeHome home;
+    EnvGuard env;
+    home.wire(env);
+    const auto user_dir = vscode_user_dir(home.path());
+    write_text_file(user_dir / "settings.json", R"({
+    "http.proxy": "https://proxy.example.com:8080",
+    "editor.fontFamily": "Fira Code"
+})");
+    const fs::path out = home.path() / "vscode.envbox";
+    auto captured_holder = capture_vscode(home, out);
+    ASSERT_TRUE(captured_holder);
+
+    PlanOptions options;
+    options.target_os_override = OsKind::linux;
+    AdapterRegistry registry;
+    registry.add(adapters::make_vscode_adapter());
+    auto plan = plan_restore(captured_holder->profile, registry, options);
+    ASSERT_TRUE(plan);
+
+    std::string all_warnings;
+    for (const auto& warning : plan->warnings) {
+        all_warnings += warning;
+        all_warnings += '\n';
+    }
+    EXPECT_EQ(all_warnings.find("references a Windows path"), std::string::npos);
+}
+
 TEST(VscodeAdapter, PlanSkipsExtensionsJsonWithWarning) {
     FakeHome home;
     EnvGuard env;

@@ -47,6 +47,7 @@ else()
 endif()
 
 add_library(envbox_core
+    src/compat/paths.cpp
     src/core/container.cpp
     src/core/os.cpp
     src/core/profile.cpp
@@ -83,9 +84,16 @@ target_include_directories(envbox_adapter_vscode PUBLIC
 target_compile_features(envbox_adapter_vscode PUBLIC cxx_std_23)
 target_link_libraries(envbox_adapter_vscode PUBLIC envbox::engine)
 
+add_library(envbox_adapter_firefox STATIC src/adapters/firefox.cpp)
+add_library(envbox::adapter_firefox ALIAS envbox_adapter_firefox)
+target_include_directories(envbox_adapter_firefox PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(envbox_adapter_firefox PUBLIC cxx_std_23)
+target_link_libraries(envbox_adapter_firefox PUBLIC envbox::engine)
+
 add_executable(envbox src/cli/main.cpp)
 target_compile_features(envbox PRIVATE cxx_std_23)
-target_link_libraries(envbox PRIVATE envbox::adapter_vscode envbox::adapter_git)
+target_link_libraries(envbox PRIVATE envbox::adapter_vscode envbox::adapter_git envbox::adapter_firefox)
 include(GNUInstallDirs)
 install(TARGETS envbox RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
@@ -102,7 +110,7 @@ else()
     target_compile_options(envbox_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-foreach(extra_target envbox_platform envbox_engine envbox_adapter_git envbox_adapter_vscode envbox)
+foreach(extra_target envbox_platform envbox_engine envbox_adapter_git envbox_adapter_vscode envbox_adapter_firefox envbox)
     if(MSVC)
         target_compile_options(${extra_target} PRIVATE /W4 /permissive-)
     else()

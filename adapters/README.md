@@ -20,10 +20,15 @@ Implemented:
    written unchanged — analysis only, never silent edits; the cross-OS preview is available
    via `envbox restore profile.envbox --dry-run --os linux`. The extensions list is
    informational; extensions are not auto-installed yet.
-
-Planned:
-
-3. `firefox/` — `prefs.js` sanitization and `user.js` extraction
+3. `firefox/` (`src/adapters/firefox.cpp`) — discovers the default profile via `profiles.ini`
+   (Windows/macOS/Linux locations), then normalizes everything into a single `user.js`:
+   an existing `user.js` is preserved and `prefs.js` entries are appended as `user_pref(...)`
+   lines, excluding credentials/sync data/session state, hardware-specific prefs
+   (`gfx.`, `layers.`, `webgl.`, ...), machine paths, and duplicate keys. Rationale: `user.js`
+   is Firefox's native, startup-enforced prefs file — portable, inspectable, and idempotent;
+   the `preferences.json` idea from the initial sketch was dropped because it would only be
+   re-encoded back into `user.js` on restore. Restore refuses to guess a profile directory:
+   if Firefox never ran on the target, it says so and stops.
 
 Adapters are built against the adapter interface (`include/envbox/engine/adapter.hpp`);
 the public SDK will formalize this as a stable, dynamically loadable API.

@@ -4,12 +4,12 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
-#include <regex>
 #include <set>
 #include <vector>
 
 #include <nlohmann/json.hpp>
 
+#include "envbox/compat/paths.hpp"
 #include "envbox/core/os.hpp"
 #include "envbox/platform/paths.hpp"
 
@@ -202,7 +202,6 @@ void analyze_node(const nlohmann::json& node,
         "terminal.integrated.defaultProfile.",
         "terminal.integrated.automationProfile.",
     };
-    static const std::regex kWindowsPath("[A-Za-z]:[\\\\/]");
 
     if (node.is_object()) {
         for (const auto& [key, value] : node.items()) {
@@ -233,7 +232,7 @@ void analyze_node(const nlohmann::json& node,
     }
     const std::string value = node.get<std::string>();
     if (target_os != OsKind::windows) {
-        if (std::regex_search(value, kWindowsPath)) {
+        if (compat::contains_windows_path(value)) {
             warnings.push_back("'" + path + "' references a Windows path (\"" + value + "\"); it will not resolve on the target OS");
         }
         if (value.find("Cascadia") != std::string::npos) {

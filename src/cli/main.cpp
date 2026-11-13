@@ -8,6 +8,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "envbox/adapters/firefox.hpp"
 #include "envbox/adapters/git.hpp"
 #include "envbox/adapters/vscode.hpp"
 #include "envbox/core/os.hpp"
@@ -38,6 +39,7 @@ exit codes: 0 ok, 1 error, 2 integrity verification failed, 3 conflicts require 
 
 engine::AdapterRegistry make_registry() {
     engine::AdapterRegistry registry;
+    registry.add(adapters::make_firefox_adapter());
     registry.add(adapters::make_git_adapter());
     registry.add(adapters::make_vscode_adapter());
     return registry;
