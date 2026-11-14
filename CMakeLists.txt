@@ -79,13 +79,17 @@ else()
             GIT_TAG 1.5.5
             GIT_SHALLOW TRUE)
         FetchContent_MakeAvailable(blake3_src)
-        add_library(envbox_blake3 STATIC
+        set(ENVBOX_BLAKE3_SOURCES
             ${blake3_src_SOURCE_DIR}/c/blake3.c
             ${blake3_src_SOURCE_DIR}/c/blake3_dispatch.c
             ${blake3_src_SOURCE_DIR}/c/blake3_portable.c)
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64|armv8)")
+            list(APPEND ENVBOX_BLAKE3_SOURCES ${blake3_src_SOURCE_DIR}/c/blake3_neon.c)
+        endif()
+        add_library(envbox_blake3 STATIC ${ENVBOX_BLAKE3_SOURCES})
         target_include_directories(envbox_blake3 PUBLIC ${blake3_src_SOURCE_DIR}/c)
         target_compile_definitions(envbox_blake3 PRIVATE
-            BLAKE3_NO_SSE2 BLAKE3_NO_SSE41 BLAKE3_NO_AVX2 BLAKE3_NO_AVX512 BLAKE3_NO_NEON)
+            BLAKE3_NO_SSE2 BLAKE3_NO_SSE41 BLAKE3_NO_AVX2 BLAKE3_NO_AVX512)
         message(STATUS "BLAKE3 not installed; building portable fallback from source")
     endif()
     set(ENVBOX_BLAKE3_TARGET envbox_blake3)
