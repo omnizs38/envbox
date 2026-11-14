@@ -51,6 +51,11 @@ The desktop app (`envbox_desktop`) is built by default; its first configure fetc
 Dear ImGui via `FetchContent` (network required once). Use `-DENVBOX_BUILD_DESKTOP=OFF` to
 build only the CLI and library.
 
+Missing development packages are fetched automatically (nlohmann/json, GoogleTest, zstd and a
+portable BLAKE3 build), so a stock toolchain is enough. CI (`.github/workflows/ci.yml`) builds
+and tests on Ubuntu 24.04, macOS 15 and Windows (MSYS2/MinGW), including a desktop selftest and
+end-to-end CLI smoke tests.
+
 ## Layout
 
 ```

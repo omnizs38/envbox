@@ -576,11 +576,67 @@ int run_check() {
     return 0;
 }
 
+int run_selftest() {
+    glfwSetErrorCallback(glfw_error_callback);
+    if (!glfwInit()) {
+        std::fprintf(stderr, "desktop selftest: failed to initialize GLFW\n");
+        return 1;
+    }
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
+    GLFWwindow* window = glfwCreateWindow(320, 200, "Envbox selftest", nullptr, nullptr);
+    if (window == nullptr) {
+        std::fprintf(stderr, "desktop selftest: failed to create a hidden window\n");
+        glfwTerminate();
+        return 1;
+    }
+    glfwMakeContextCurrent(window);
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, false);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGui::Begin("selftest");
+    ImGui::TextUnformatted("ok");
+    ImGui::End();
+    ImGui::Render();
+
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    glViewport(0, 0, width, height);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    glfwSwapBuffers(window);
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    std::printf("desktop selftest OK\n");
+    return 0;
+}
+
 }
 
 int main(int argc, char** argv) {
     if (argc > 1 && std::strcmp(argv[1], "--check") == 0) {
         return run_check();
+    }
+    if (argc > 1 && std::strcmp(argv[1], "--selftest") == 0) {
+        return run_selftest();
     }
 
     glfwSetErrorCallback(glfw_error_callback);

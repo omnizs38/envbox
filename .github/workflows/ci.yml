@@ -17,14 +17,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build g++ libsqlite3-dev libzstd-dev nlohmann-json3-dev \
-            libgtest-dev libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev \
-            libxcursor-dev libxi-dev
+            libgtest-dev libgl1-mesa-dev libgl1-mesa-dri xvfb libx11-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libxi-dev
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Desktop selftest
+        run: xvfb-run -a build/envbox_desktop --selftest
       - name: CLI smoke
         run: |
           export HOME="$RUNNER_TEMP/envbox-home"
@@ -50,6 +52,8 @@ jobs:
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Desktop selftest
+        run: build/envbox_desktop --selftest
       - name: CLI smoke
         run: |
           export HOME="$RUNNER_TEMP/envbox-home"
@@ -89,6 +93,8 @@ jobs:
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Desktop selftest
+        run: ./build/envbox_desktop.exe --selftest
       - name: CLI smoke
         run: |
           mkdir -p ci-home
