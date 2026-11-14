@@ -52,6 +52,7 @@ struct RestoreResult {
 
 struct PlanOptions {
     std::optional<OsKind> target_os_override;
+    std::vector<std::string> only_applications;
 };
 
 [[nodiscard]] Result<RestorePlan> plan_restore(const Profile& profile,

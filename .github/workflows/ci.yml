@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Linux (Ubuntu)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ libsqlite3-dev libzstd-dev nlohmann-json3-dev \
+            libgtest-dev libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: CLI smoke
+        run: |
+          export HOME="$RUNNER_TEMP/envbox-home"
+          mkdir -p "$HOME"
+          printf '[user]\n\tname = CI\n' > "$HOME/.gitconfig"
+          build/envbox capture --profile ci --output "$RUNNER_TEMP/ci.envbox"
+          build/envbox inspect "$RUNNER_TEMP/ci.envbox" --json > /dev/null
+          build/envbox diff "$RUNNER_TEMP/ci.envbox" --json > /dev/null
+          build/envbox profiles add "$RUNNER_TEMP/ci.envbox"
+          build/envbox profiles list --json > /dev/null
+          build/envbox restore "$RUNNER_TEMP/ci.envbox" --dry-run --json > /dev/null
+
+  macos:
+    name: macOS (arm64)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install cmake ninja nlohmann-json googletest zstd
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: CLI smoke
+        run: |
+          export HOME="$RUNNER_TEMP/envbox-home"
+          mkdir -p "$HOME"
+          printf '[user]\n\tname = CI\n' > "$HOME/.gitconfig"
+          build/envbox capture --profile ci --output "$RUNNER_TEMP/ci.envbox"
+          build/envbox inspect "$RUNNER_TEMP/ci.envbox" --json > /dev/null
+          build/envbox diff "$RUNNER_TEMP/ci.envbox" --json > /dev/null
+          build/envbox profiles add "$RUNNER_TEMP/ci.envbox"
+          build/envbox profiles list --json > /dev/null
+          build/envbox restore "$RUNNER_TEMP/ci.envbox" --dry-run --json > /dev/null
+
+  windows:
+    name: Windows (MSYS2 / MinGW)
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-nlohmann-json
+            mingw-w64-x86_64-zstd
+            mingw-w64-x86_64-libblake3
+            mingw-w64-x86_64-gtest
+            mingw-w64-x86_64-sqlite3
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: CLI smoke
+        run: |
+          mkdir -p ci-home
+          printf '[user]\n\tname = CI\n' > ci-home/.gitconfig
+          export USERPROFILE="$(cygpath -w "$PWD/ci-home")"
+          export HOME="$USERPROFILE"
+          export APPDATA="$(cygpath -w "$PWD/ci-home/AppData/Roaming")"
+          export LOCALAPPDATA="$(cygpath -w "$PWD/ci-home/AppData/Local")"
+          ./build/envbox.exe capture --profile ci --output ci-home/ci.envbox
+          ./build/envbox.exe inspect ci-home/ci.envbox --json > /dev/null
+          ./build/envbox.exe diff ci-home/ci.envbox --json > /dev/null
+          ./build/envbox.exe profiles add ci-home/ci.envbox
+          ./build/envbox.exe profiles list --json > /dev/null
+          ./build/envbox.exe restore ci-home/ci.envbox --dry-run --json > /dev/null

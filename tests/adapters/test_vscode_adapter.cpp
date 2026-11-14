@@ -37,7 +37,7 @@ constexpr const char* kKeybindings = R"([
 ])";
 
 fs::path vscode_user_dir(const fs::path& home) {
-    return home / "AppData" / "Roaming" / "Code" / "User";
+    return test::host_vscode_user_dir(home);
 }
 
 void setup_vscode_source(const FakeHome& home) {

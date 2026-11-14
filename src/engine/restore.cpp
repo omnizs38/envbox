@@ -116,9 +116,14 @@ Result<RestorePlan> plan_restore(const Profile& profile, const AdapterRegistry& 
         }
     }
 
+    const std::set<std::string> selected_apps(options.only_applications.begin(), options.only_applications.end());
     std::set<std::string> declared_app_ids;
     for (const auto& app : profile.info.applications) {
         declared_app_ids.insert(app.id);
+        if (!selected_apps.empty() && !selected_apps.contains(app.id)) {
+            plan.warnings.push_back("application '" + app.id + "' not selected; skipped");
+            continue;
+        }
         const Adapter* adapter = registry.find(app.adapter);
         if (adapter == nullptr) {
             plan.missing.emplace_back(app.adapter, "no adapter registered for application '" + app.id + "'");
@@ -183,6 +188,12 @@ Result<RestorePlan> plan_restore(const Profile& profile, const AdapterRegistry& 
     for (const auto& id : payload_app_ids) {
         if (!declared_app_ids.contains(id)) {
             plan.missing.emplace_back(id, "payload files present but application is not declared in the profile");
+        }
+    }
+
+    for (const auto& id : selected_apps) {
+        if (!declared_app_ids.contains(id)) {
+            plan.warnings.push_back("selected application '" + id + "' is not present in the profile");
         }
     }
 

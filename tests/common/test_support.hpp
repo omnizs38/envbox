@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "envbox/core/os.hpp"
+
 namespace envbox::test {
 
 class EnvGuard {
@@ -100,6 +102,22 @@ class FakeHome {
   private:
     std::filesystem::path dir_;
 };
+
+[[nodiscard]] inline std::filesystem::path host_vscode_user_dir(const std::filesystem::path& home) {
+    switch (current_os().kind) {
+        case OsKind::windows: return home / "AppData" / "Roaming" / "Code" / "User";
+        case OsKind::macos:   return home / "Library" / "Application Support" / "Code" / "User";
+        default:              return home / ".config" / "Code" / "User";
+    }
+}
+
+[[nodiscard]] inline std::filesystem::path host_firefox_root(const std::filesystem::path& home) {
+    switch (current_os().kind) {
+        case OsKind::windows: return home / "AppData" / "Roaming" / "Mozilla" / "Firefox";
+        case OsKind::macos:   return home / "Library" / "Application Support" / "Firefox";
+        default:              return home / ".mozilla" / "firefox";
+    }
+}
 
 inline void write_text_file(const std::filesystem::path& path, const std::string& content) {
     std::filesystem::create_directories(path.parent_path());

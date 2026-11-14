@@ -38,7 +38,7 @@ user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 )";
 
 fs::path firefox_root(const fs::path& home) {
-    return home / "AppData" / "Roaming" / "Mozilla" / "Firefox";
+    return test::host_firefox_root(home);
 }
 
 fs::path setup_firefox(const FakeHome& home, const std::string& profile_rel, bool with_user_js) {

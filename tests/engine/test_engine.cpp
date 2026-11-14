@@ -8,6 +8,7 @@
 
 #include "common/test_support.hpp"
 #include "envbox/adapters/git.hpp"
+#include "envbox/adapters/vscode.hpp"
 #include "envbox/core/os.hpp"
 #include "envbox/core/profile.hpp"
 #include "envbox/engine/capture.hpp"
@@ -247,6 +248,111 @@ TEST(Engine, PlanActionsCarryAdaptedBytes) {
     ASSERT_EQ(plan->actions.size(), 1u);
     EXPECT_FALSE(plan->actions[0].adapted);
     EXPECT_EQ(plan->actions[0].data.size(), std::char_traits<char>::length(kCapturedConfig));
+}
+
+TEST(Engine, CaptureOnlySelectedAdapters) {
+    FakeHome home;
+    EnvGuard env;
+    home.wire(env);
+    write_text_file(home.path() / ".gitconfig", kCapturedConfig);
+    const fs::path out = home.path() / "scoped.envbox";
+
+    AdapterRegistry registry;
+    registry.add(adapters::make_git_adapter());
+    registry.add(adapters::make_vscode_adapter());
+    ProfileInfo info;
+    info.name = "Scoped Capture";
+    CaptureOptions options;
+    options.only_adapters = {"git"};
+
+    auto report = capture_profile(out, info, registry, options);
+    ASSERT_TRUE(report) << report.error().message;
+    EXPECT_EQ(report->captured, std::vector<std::string>{"git"});
+    EXPECT_TRUE(report->skipped.empty());
+
+    auto profile = open_profile(out);
+    ASSERT_TRUE(profile);
+    ASSERT_EQ(profile->info.applications.size(), 1u);
+    EXPECT_EQ(profile->info.applications[0].id, "git");
+}
+
+TEST(Engine, CaptureRejectsUnregisteredSelectedAdapter) {
+    FakeHome home;
+    EnvGuard env;
+    home.wire(env);
+    write_text_file(home.path() / ".gitconfig", kCapturedConfig);
+    const fs::path out = home.path() / "scoped.envbox";
+
+    AdapterRegistry registry;
+    registry.add(adapters::make_git_adapter());
+    ProfileInfo info;
+    info.name = "Bad Selection";
+    CaptureOptions options;
+    options.only_adapters = {"firefox"};
+
+    auto report = capture_profile(out, info, registry, options);
+    ASSERT_FALSE(report);
+    EXPECT_EQ(report.error().code, ErrorCode::not_found);
+    EXPECT_NE(report.error().message.find("not registered"), std::string::npos);
+}
+
+TEST(Engine, PlanOnlySelectedApplications) {
+    Profile profile;
+    profile.info.name = "Scoped Plan";
+    profile.info.source = {"linux", "x86_64"};
+    profile.info.applications = {{"git", "", "git", 1}, {"vscode", "", "vscode", 1}};
+    profile.payload = {
+        {"applications/git/config", {std::byte{'a'}}, false},
+        {"applications/vscode/settings.json", {std::byte{'{'}, std::byte{'}'}}, false},
+    };
+
+    FakeHome home;
+    EnvGuard env;
+    home.wire(env);
+    AdapterRegistry registry;
+    registry.add(adapters::make_git_adapter());
+    registry.add(adapters::make_vscode_adapter());
+
+    PlanOptions options;
+    options.only_applications = {"git"};
+    auto plan = plan_restore(profile, registry, options);
+    ASSERT_TRUE(plan);
+    ASSERT_EQ(plan->actions.size(), 1u);
+    EXPECT_EQ(plan->actions[0].application_id, "git");
+    bool warned = false;
+    for (const auto& warning : plan->warnings) {
+        if (warning.find("vscode") != std::string::npos && warning.find("not selected") != std::string::npos) {
+            warned = true;
+        }
+    }
+    EXPECT_TRUE(warned);
+}
+
+TEST(Engine, PlanWarnsAboutUnknownSelectedApplication) {
+    Profile profile;
+    profile.info.name = "Unknown Selection";
+    profile.info.source = {"linux", "x86_64"};
+    profile.info.applications = {{"git", "", "git", 1}};
+    profile.payload = {{"applications/git/config", {std::byte{'a'}}, false}};
+
+    FakeHome home;
+    EnvGuard env;
+    home.wire(env);
+    AdapterRegistry registry;
+    registry.add(adapters::make_git_adapter());
+
+    PlanOptions options;
+    options.only_applications = {"does-not-exist"};
+    auto plan = plan_restore(profile, registry, options);
+    ASSERT_TRUE(plan);
+    EXPECT_TRUE(plan->actions.empty());
+    bool warned = false;
+    for (const auto& warning : plan->warnings) {
+        if (warning.find("does-not-exist") != std::string::npos) {
+            warned = true;
+        }
+    }
+    EXPECT_TRUE(warned);
 }
 
 TEST(Engine, PlanWarnsWhenApplicationHasNoPayload) {
