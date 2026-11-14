@@ -61,26 +61,33 @@ else()
 endif()
 
 find_package(blake3 QUIET)
-if(NOT TARGET BLAKE3::blake3 AND NOT TARGET blake3)
-    set(BLAKE3_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(blake3
-        GIT_REPOSITORY https://github.com/BLAKE3-team/BLAKE3.git
-        GIT_TAG 1.5.5
-        GIT_SHALLOW TRUE)
-    FetchContent_MakeAvailable(blake3)
-endif()
-
 if(TARGET BLAKE3::blake3)
     set(ENVBOX_BLAKE3_TARGET BLAKE3::blake3)
 elseif(TARGET blake3)
     set(ENVBOX_BLAKE3_TARGET blake3)
 else()
-    find_path(BLAKE3_INCLUDE_DIR blake3.h REQUIRED)
-    find_library(BLAKE3_LIBRARY NAMES blake3 REQUIRED)
-    add_library(envbox_blake3 UNKNOWN IMPORTED)
-    set_target_properties(envbox_blake3 PROPERTIES
-        IMPORTED_LOCATION "${BLAKE3_LIBRARY}"
-        INTERFACE_INCLUDE_DIRECTORIES "${BLAKE3_INCLUDE_DIR}")
+    find_path(BLAKE3_INCLUDE_DIR blake3.h)
+    find_library(BLAKE3_LIBRARY NAMES blake3)
+    if(BLAKE3_INCLUDE_DIR AND BLAKE3_LIBRARY)
+        add_library(envbox_blake3 UNKNOWN IMPORTED)
+        set_target_properties(envbox_blake3 PROPERTIES
+            IMPORTED_LOCATION "${BLAKE3_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${BLAKE3_INCLUDE_DIR}")
+    else()
+        FetchContent_Declare(blake3_src
+            GIT_REPOSITORY https://github.com/BLAKE3-team/BLAKE3.git
+            GIT_TAG 1.5.5
+            GIT_SHALLOW TRUE)
+        FetchContent_MakeAvailable(blake3_src)
+        add_library(envbox_blake3 STATIC
+            ${blake3_src_SOURCE_DIR}/c/blake3.c
+            ${blake3_src_SOURCE_DIR}/c/blake3_dispatch.c
+            ${blake3_src_SOURCE_DIR}/c/blake3_portable.c)
+        target_include_directories(envbox_blake3 PUBLIC ${blake3_src_SOURCE_DIR}/c)
+        target_compile_definitions(envbox_blake3 PRIVATE
+            BLAKE3_NO_SSE2 BLAKE3_NO_SSE41 BLAKE3_NO_AVX2 BLAKE3_NO_AVX512 BLAKE3_NO_NEON)
+        message(STATUS "BLAKE3 not installed; building portable fallback from source")
+    endif()
     set(ENVBOX_BLAKE3_TARGET envbox_blake3)
 endif()
 

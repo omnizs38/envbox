@@ -38,8 +38,8 @@ jobs:
           build/envbox restore "$RUNNER_TEMP/ci.envbox" --dry-run --json > /dev/null
 
   macos:
-    name: macOS (arm64)
-    runs-on: macos-14
+    name: macOS
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
