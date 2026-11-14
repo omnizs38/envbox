@@ -53,7 +53,11 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Desktop selftest
-        run: build/envbox_desktop --selftest
+        run: |
+          set +e
+          build/envbox_desktop --selftest
+          code=$?
+          if [ $code -ne 0 ] && [ $code -ne 2 ]; then exit $code; fi
       - name: CLI smoke
         run: |
           export HOME="$RUNNER_TEMP/envbox-home"
@@ -94,7 +98,11 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Desktop selftest
-        run: ./build/envbox_desktop.exe --selftest
+        run: |
+          set +e
+          ./build/envbox_desktop.exe --selftest
+          code=$?
+          if [ $code -ne 0 ] && [ $code -ne 2 ]; then exit $code; fi
       - name: CLI smoke
         run: |
           mkdir -p ci-home

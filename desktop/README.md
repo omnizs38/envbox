@@ -10,7 +10,7 @@ cmake -S . -B build -G Ninja
 cmake --build build
 build/envbox_desktop.exe        (Windows)
 build/envbox_desktop --check    (headless self-check: version, host, adapters)
-build/envbox_desktop --selftest (hidden-window GLFW/OpenGL/ImGui smoke test)
+build/envbox_desktop --selftest (hidden-window GLFW/OpenGL/ImGui smoke test; exit 2 = no display)
 ```
 
 Scope:

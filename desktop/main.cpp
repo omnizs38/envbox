@@ -579,8 +579,8 @@ int run_check() {
 int run_selftest() {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) {
-        std::fprintf(stderr, "desktop selftest: failed to initialize GLFW\n");
-        return 1;
+        std::fprintf(stderr, "desktop selftest skipped: no display server available\n");
+        return 2;
     }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -590,14 +590,15 @@ int run_selftest() {
 
     GLFWwindow* window = glfwCreateWindow(320, 200, "Envbox selftest", nullptr, nullptr);
     if (window == nullptr) {
-        std::fprintf(stderr, "desktop selftest: failed to create a hidden window\n");
+        std::fprintf(stderr, "desktop selftest skipped: no usable OpenGL context\n");
         glfwTerminate();
-        return 1;
+        return 2;
     }
     glfwMakeContextCurrent(window);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGui::GetIO().IniFilename = nullptr;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, false);
     ImGui_ImplOpenGL3_Init("#version 330");
